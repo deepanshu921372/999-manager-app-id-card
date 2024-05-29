@@ -100,7 +100,7 @@ async function generateIdCard(employee) {
         const designation = employee.designation;
         const empId = employee.empID;
         const workBranch = employee.workShift;
-        const bloodGroup = employee.bloodGroup || 'Unknown';
+        const bloodgroup = employee.bloodgroup || 'Unknown';
 
         const nameTextWidth = Jimp.measureText(fontBold, name);
         const nameTextX = (cardWidth - nameTextWidth) / 2;
@@ -112,7 +112,7 @@ async function generateIdCard(employee) {
         const infoStartY = textStartY + lineSpacing + 150;
         centeredText(`Emp ID: ${empId}`, infoStartY, true);
         centeredText(`Work Branch: ${workBranch}`, infoStartY + lineSpacing, true);
-        centeredText(`Blood Group: ${bloodGroup}`, infoStartY + 2 * lineSpacing, true);
+        centeredText(`Blood Group: ${bloodgroup}`, infoStartY + 2 * lineSpacing, true);
 
         // Save the final image
         const finalImagePath = path.join('./id_card_final.png');
@@ -131,56 +131,50 @@ async function generateIdCard(employee) {
     }
 }
 
-// Controller functions
+
+
 exports.registerEmployee = async (req, res) => {
-    console.log(JSON.stringify(req.body.jdata))
-    sequelizeEMS.query(
-        "sp_EMS_POST_registerEmployee :empID, :locID, :cID, :name, :mobile, :DOB, :designation, :workShift, :empType, :aadharFront, :aadharBack, :pan, :bloodgroup, :bankAcctNo, :beneficiaryName, :ifsc, :bankProof, :profilePic, :jdata",
-        {
-            replacements: {
-                empID: req.body.empID,
-                locID: req.body.locID,
-                cID: req.body.cID,
-                name: req.body.name,
-                mobile: req.body.mobile,
-                DOB: req.body.DOB,
-                designation: req.body.designation,
-                workShift: req.body.workShift,
-                empType: req.body.empType,
-                aadharFront: req.body.aadharFront,
-                aadharBack: req.body.aadharBack,
-                pan: req.body.pan,
-                bloodgroup: req.body.bloodgroup,
-                bankAcctNo: req.body.bankAcctNo,
-                beneficiaryName: req.body.beneficiaryName,
-                ifsc: req.body.ifsc,
-                bankProof: req.body.bankProof,
-                profilePic: req.body.profilePic,
-                jdata: JSON.stringify(req.body.jdata)
-            },
-            type: Sequelize.QueryTypes.SELECT
-        }
-    ).then(async (result) => {
+    try {
+        const { empID, locID, cID, name, mobile, DOB, designation, workShift, bloodgroup, empType, aadharFront, aadharBack, pan, bankAcctNo, beneficiaryName, ifsc, bankProof, profilePic, jdata } = req.body;
 
-        const employee = {profilePic: req.body.profilePic, name: req.body.name, designation: req.body.designation, empID: req.body.empID, workShift: req.body.workShift, bloodGroup: req.body.bloodGroup };
-    
-        const imageUrl = await generateIdCard(employee);
-      
+        const employee = {
+            empID,
+            locID,
+            cID,
+            name,
+            mobile,
+            DOB,
+            designation,
+            workShift,
+            bloodgroup,
+            empType,
+            aadharFront,
+            aadharBack,
+            pan,
+            bankAcctNo,
+            beneficiaryName,
+            ifsc,
+            bankProof,
+            profilePic
+        };
 
-        res.status(200).json({
-            success: true,
-            data: result,
-            idCardUrl: imageUrl
-        });
-    })
-    .catch((error) => {
-        res.status(200).json({
-            success: false,
-            message: error.message
-        });
-    });
+        const idCardUrl = await generateIdCard(employee);
+        employee.idCardUrl = idCardUrl;
+
+        await sequelizeEMS.query(
+            `sp_EMS_POST_registerEmployee :empID, :locID, :cID, :name, :mobile, :DOB, :designation, :workShift, :bloodgroup, :empType, :aadharFront, :aadharBack, :pan, :bankAcctNo, :beneficiaryName, :ifsc, :bankProof, :profilePic, :idCardUrl, :jdata`,
+            {
+                replacements: { ...employee, jdata: JSON.stringify(jdata) },
+                type: sequelizeEMS.QueryTypes.RAW
+            }
+        );
+
+        res.status(200).json({ success: true, message: 'Employee registered successfully', data: employee });
+    } catch (error) {
+        console.error('Error registering employee:', error);
+        res.status(500).json({ success: false, message: 'Failed to register employee', error: error.message });
+    }
 };
-
 exports.getUsers = async (req, res) => {
     sequelizeEMS.query(
         "sp_EMS_GET_employeeDetails",

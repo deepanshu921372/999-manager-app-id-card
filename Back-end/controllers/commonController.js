@@ -17,6 +17,7 @@ const s3Client = new S3Client({
 // Function to upload image to S3
 exports.uploadImage = async (req, res) => {
   try {
+    console.log(req.files.image)
     if (!req.files || !req.files.image) {
       return res.status(400).json({ success: false, message: 'No image file was uploaded.' });
     }
@@ -42,10 +43,10 @@ exports.uploadImage = async (req, res) => {
 
     // Upload image to S3
     const result = await upload.done();
-
+    
     // If upload is successful, construct image URL
     const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
-
+    console.log(imageUrl)
     // Return success response with image URL
     res.status(200).json({ success: true, imageUrl: imageUrl });
   } catch (error) {
